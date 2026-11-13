@@ -2,11 +2,10 @@ package action
 
 import (
 	"fmt"
-	"github.com/gofiber/fiber/v2"
-	"os"
-	"os/signal"
-	"syscall"
+	"net/http/httptest"
 	"testing"
+
+	"github.com/gofiber/fiber/v3"
 )
 
 type Demo struct {
@@ -23,16 +22,16 @@ func (d Demo) Group() string {
 }
 
 func (d Demo) ChooseMid(t MidType) []fiber.Handler {
-	return []fiber.Handler{func(ctx *fiber.Ctx) error {
+	return []fiber.Handler{func(ctx fiber.Ctx) error {
 
 		fmt.Println(ctx.BaseURL())
 
-		return nil
+		return ctx.Next()
 	}}
 }
 
-func (d Demo) hello(ctx *fiber.Ctx) (err error) {
-	return
+func (d Demo) hello(ctx fiber.Ctx) error {
+	return ctx.SendStatus(fiber.StatusNoContent)
 }
 
 func TestController(t *testing.T) {
@@ -40,18 +39,12 @@ func TestController(t *testing.T) {
 
 	AutoRegister(ser, Demo{})
 
-	go func() {
-		ser.Listen(":8080")
-	}()
-
-	//监听程序退出
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGKILL)
-
-	select {
-	case <-ch:
-		defer close(ch)
+	resp, err := ser.Test(httptest.NewRequest(fiber.MethodGet, "/demo/hello", nil))
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	ser.Shutdown()
+	defer resp.Body.Close()
+	if resp.StatusCode != fiber.StatusNoContent {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, fiber.StatusNoContent)
+	}
 }

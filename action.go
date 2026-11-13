@@ -1,10 +1,11 @@
 package action
 
 import (
-	"github.com/gofiber/fiber/v2"
 	"reflect"
 	"runtime"
 	"strings"
+
+	"github.com/gofiber/fiber/v3"
 )
 
 const defaultMidSep = '-'
